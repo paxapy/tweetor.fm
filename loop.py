@@ -1,10 +1,28 @@
+import json
+import oauth2
 import tornado.ioloop
 import tornado.web
+
+import keys
+
+
+def get_tweets(username):
+    url = 'https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name={0}'.format(username)
+    consumer = oauth2.Consumer(key=keys.KEY, secret=keys.SECRET)
+    token = oauth2.Token(key=keys.TOKEN, secret=keys.TOKEN_SECRET)
+    client = oauth2.Client(consumer, token)
+    resp, content = client.request(url, method='GET')
+    return [tw.get('text') for tw in json.loads(content)]
 
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        self.render('index.html')
+        self.render('page.html')
+
+    def post(self, *args, **kwargs):
+        username = self.get_argument('username')
+        tweets = get_tweets(username)
+        self.render('page.html', tweets=tweets)
 
 
 def make_app():
@@ -13,18 +31,8 @@ def make_app():
         (r"/", MainHandler),
     ])
 
+
 if __name__ == "__main__":
     app = make_app()
     app.listen(8888)
     tornado.ioloop.IOLoop.current().start()
-"""
-curl
---get 'https://api.twitter.com/1.1/statuses/user_timeline.json'
---data 'count=3&screen_name=paxapy'
---header 'Authorization: OAuth oauth_consumer_key="",
-oauth_nonce="", oauth_signature="",
-oauth_signature_method="HMAC-SHA1",
-oauth_timestamp="1453661320",
-oauth_token="",
-oauth_version="1.0"' --verbose
-"""
